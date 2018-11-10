@@ -1,8 +1,5 @@
 import numpy as np
-from scipy import fftpack
 from PIL import Image
-
-
 
 QUANT_ = np.array(
   [[16,11,10,16,24,40,51,61],
@@ -115,7 +112,7 @@ def dct_transformation(img_arr):
 # Seems to be the fourth step
 def quantification(dct_arr):
   #quant_matrix = np.fromfunction(lambda i,j: 1+(i+j+1)*quality, (8,8))
-  #quantified_matrix = np.copy(dct_arr)
+  quantified_matrix = np.copy(dct_arr)
 
   for u in range(0,8):
     for v in range(0,8):
@@ -123,7 +120,27 @@ def quantification(dct_arr):
 
   return quantified_matrix
 
+# Seems to be the fifth step
+def codage(quant_m):
+  diag_values = []
+  for x in range(1, 9):
+    diag = list(zip(range(0,x), range(x-1,-1,-1)))
+    if x % 2:
+      diag = diag[::-1]
+    for pos in diag:
+      diag_values.append(quant_m[pos[0], pos[1]])
+
+
+  for x in range(1,8):
+    diag = list(zip(range(x,8), range(7,-1,-1)))
+    if x % 2:
+      diag = diag[::-1]
+    for pos in diag:
+      diag_values.append(quant_m[pos[0], pos[1]])
   
+  idx_l = len(diag_values) \
+          - next(i for i,v in enumerate(diag_values[::-1]) if v != 0)
+  return diag_values[0:idx_l]
   
 
 
@@ -139,5 +156,6 @@ dct_test = np.array([[139,144,149,153,155,155,155,155],
 [159,161,162,160,160,159,159,159],[159,160,161,162,162,155,155,155],[161,161,161,161,160,157,157,157],[162,162,161,163,162,157,157,157],[162,162,161,161,163,158,158,158]])
 
 dct_transformed = dct_transformation(dct_test)
-print(dct_transformed)
-print(quantification(dct_transformed))
+#print(dct_transformed)
+quant_m = quantification(dct_transformed)
+codage(quant_m)
