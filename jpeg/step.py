@@ -2,6 +2,20 @@ import numpy as np
 from scipy import fftpack
 from PIL import Image
 
+
+
+QUANT_ = np.array(
+  [[16,11,10,16,24,40,51,61],
+  [12,12,14,19,26,58,60,55],
+  [14,13,16,24,40,57,69,56],
+  [14,17,22,29,51,87,80,62],
+  [18,22,37,56,68,109,103,77],
+  [24,35,55,64,81,104,113,92],
+  [49,64,78,87,103,121,120,101],
+  [72,92,95,98,112,100,103,99]]
+)
+
+
 # Seems to be the first step
 def rgb_to_YCbCr(img_arr):
   h = img_arr.shape[0]
@@ -66,6 +80,7 @@ def chroma_subsampling(img_arr,a=2,b=0):
     img_arr[i] = th 
 
 
+# Seems to be the third step
 def dct_transformation(img_arr):
   def DCT(i, j, img_arr):
     CI = 1/np.sqrt(2) if i == 0 else 1
@@ -83,11 +98,10 @@ def dct_transformation(img_arr):
     return np.round(2/8 * CI * CJ * total)
 
 
-
-  dct_transformed = np.copy(img_arr)
-
   if img_arr.shape != (8,8):
     raise ValueError("Img array shape must be 8x8")
+
+  dct_transformed = np.copy(img_arr)
 
   for i in range(0,8):
     for j in range(0,8):
@@ -95,6 +109,23 @@ def dct_transformation(img_arr):
       dct_transformed[i, j] = DCT(i, j, img_arr) 
 
   return dct_transformed
+
+
+
+# Seems to be the fourth step
+def quantification(dct_arr):
+  #quant_matrix = np.fromfunction(lambda i,j: 1+(i+j+1)*quality, (8,8))
+  #quantified_matrix = np.copy(dct_arr)
+
+  for u in range(0,8):
+    for v in range(0,8):
+      quantified_matrix[u,v] = (dct_arr[u,v] + (QUANT_[u,v] // 2)) // QUANT_[u,v]
+
+  return quantified_matrix
+
+  
+  
+
 
 path = "/Users/franckthang/Work/PersonalWork/jpeg-compression/resources/cat.jpg"
 img = Image.open(path)
@@ -109,6 +140,4 @@ dct_test = np.array([[139,144,149,153,155,155,155,155],
 
 dct_transformed = dct_transformation(dct_test)
 print(dct_transformed)
-#print(fftpack.dct(fftpack.dct(dct_test, axis=0), axis=1)[0,0])
-
-
+print(quantification(dct_transformed))
