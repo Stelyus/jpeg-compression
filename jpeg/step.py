@@ -16,7 +16,7 @@ QUANT_ = np.array(
 
 class Jpeg():
   def __init__(self, format=(4,2,0)):
-    dct = { (4,4,4): (8,8), (4,2,2): (16,8), (4,2,0): (16,16) }
+    dct = { (4,4,4): (8,8), (4,2,2): (8,16), (4,2,0): (16,16) }
     
     if format not in dct:
       raise ValueError("Format %s not correct" % format)
@@ -28,8 +28,8 @@ class Jpeg():
     h = img_arr.shape[0]
     w = img_arr.shape[1]
 
-    ah = h % self.mcu[0]
-    aw = w % self.mcu[1]
+    ah = self.mcu[0] - (h % self.mcu[0])
+    aw = self.mcu[1] - (w % self.mcu[1])
       
     #print("Module ah %s, aw %s" % (ah, aw))
     #print("Shape image %s" % (img_arr.shape,))
@@ -38,9 +38,12 @@ class Jpeg():
 
     arr_h = np.full((ah, w, 3), img_arr[-1])
     new_arr = np.vstack((img_arr, arr_h))
-    arr_w = np.full((h + ah, 3), new_arr[:,-1]).reshape((h + ah,aw,3))
+    arr_w = np.full((aw, h + ah, 3), new_arr[:,-1]).reshape((h + ah,aw,3))
     new_arr = np.hstack((new_arr, arr_w))
 
+  
+    print("Before arr shape %s" % (img_arr.shape, ))
+    print("New arr shape %s" % (new_arr.shape,))
     return new_arr
 
   def _rgb_to_YCbCr(self, img_arr):
@@ -105,8 +108,37 @@ class Jpeg():
         remove_chroma(th, self.format[1])
       img_arr[i] = th 
 
+  def _splitting_blocks(self, img_arr):
+    h, w = img_arr.shape[0], img_arr.shape[1]
+    partial_split = np.split(img_arr, h / self.mcu[0], axis=0)
 
-   
+    return list(map(lambda x:np.split(x, w / self.mcu[1], axis=1), partial_split))
+
+
+  def _dct_transformation1(self, img_arr):
+    def DCT(i, j, img_arr):
+      CI = 1/np.sqrt(2) if i == 0 else 1
+      CJ = 1/np.sqrt(2) if j == 0 else 1
+    
+      
+      total = 0
+      for x in range(0,8):
+        min_total = 0
+        for y in range(0,8):
+          cos = np.cos([((2*x+1)*i*np.pi) / 16,((2*y+1)*j*np.pi) / 16])
+          min_total += img_arr[x,y] * cos[0] * cos[1]
+        total += min_total
+
+      return np.round(2/8 * CI * CJ * total)
+
+    dct_transformed = np.copy(img_arr)
+
+    for i in range(0,self.mcu[0]):
+      for j in range(0,self.mcu[1]):
+        value_pixel = img_arr[i,j]
+        dct_transformed[i, j] = DCT(i, j, img_arr) 
+
+    return dct_transformed
 
   def _dct_transformation(self, img_arr):
     def DCT(i, j, img_arr):
@@ -124,7 +156,7 @@ class Jpeg():
 
       return np.round(2/8 * CI * CJ * total)
 
-
+    # TODO
     if img_arr.shape != (8,8):
       raise ValueError("Img array shape must be 8x8")
 
@@ -180,14 +212,16 @@ class Jpeg():
     
 
   def run(self, imgpath):
-    img = Image.open(imgpath)
-    reshaped_image = self._reshaping(np.asarray(img))
-    #new_image = self._rgb_to_YCbCr(np.asarray(img))
-    #self._chroma_subsampling(new_image)
-    #dct_transformed = self._dct_transformation(dct_test)
+    reshaped_image = self._reshaping(np.asarray(Image.open(imgpath)))
+    new_image = self._rgb_to_YCbCr(np.asarray(reshaped_image))
+    self._chroma_subsampling(new_image)
+    # TODO Split into blocks
+
+    blocks = self._splitting_blocks(new_image)
+#
+    #dct_transformed = self._dct_transformation(new_image)
     #quant_m = self._quantification(dct_transformed)
     #print(self._codage(quant_m))
-#
 
 #def YCbCr_to_rgb():
   #R = Y + 1.402 * (Cr-128)
