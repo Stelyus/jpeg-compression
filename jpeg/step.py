@@ -69,13 +69,13 @@ class Jpeg():
 
 
   def _chroma_subsampling(self, img_arr):
-    # Seems to be the second step
-    # Depending on chroma subsampling, this yields Minimum Coded Unit (MCU) blocks
+    # seems to be the second step
+    # depending on chroma subsampling, this yields minimum coded unit (mcu) blocks
     # of size 8×8 (4:4:4 – no subsampling), 16×8 (4:2:2), or most commonly 16×16
     # (4:2:0)
     # the encoder must fill the remaining area of the incomplete blocks with some
     # form of dummy data.
-    # Seems to be the third step
+    # seems to be the third step
 
     def remove_chroma(array, pattern_width):
       if pattern_width == 4:
@@ -90,7 +90,7 @@ class Jpeg():
           array[i] = [array[i][0], 0, 0]
 
 
-      # If the pattern is 0 we need to remove the first index 
+      # if the pattern is 0 we need to remove the first index 
       if step == pattern_width_dict[0]:
         array[0] = [array[i][0], 0, 0]
 
@@ -167,12 +167,15 @@ class Jpeg():
       for pos in diag:
         diag_values.append(quant_m[pos[0], pos[1]])
 
-    idx_l = len(diag_values) \
-            - next(i for i,v in enumerate(diag_values[::-1]) if v != 0)
-    return diag_values[0:idx_l]
 
+    return diag_values
+    #idx_l = len(diag_values) \
+            #- next(i for i,v in enumerate(diag_values[::-1]) if v != 0)
+    #return diag_values[0:idx_l]
+#
   def _compress(self, diag_l):
-    pass
+    # TODO:(Encoding + Huffman but too lazy)
+    print(diag_l)
     
 
   def run(self, imgpath):
@@ -186,10 +189,16 @@ class Jpeg():
     # Mean Shifting: For averaging the image pixels to 0, we mean shift by
     # subtracting 128 from every pixel.
 
-    block = blocks[0][0][:,:,0]
+    # Testing purpose only
+    block = blocks[5][5][:,:,0]
     dct_transformed = self._dct_transformation(block)
+    print(dct_transformed)
     quant_m = self._quantification(block)
-    self._codage(quant_m)
+    print(quant_m)
+    diag_values = self._codage(quant_m)
+    self._compress(diag_values)
+
+
 
 #def YCbCr_to_rgb():
   #R = Y + 1.402 * (Cr-128)
